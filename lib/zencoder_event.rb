@@ -13,15 +13,16 @@ module ZencoderEvent
     alias :setup :configure
 
     def instrument(params)
+      byebug
       state = params[:input][:state]
       id = params[:job][:pass_through]
-      #notification = JSON.parse(params[:input].to_s, object_class: OpenStruct)
       backend.instrument namespace.call(state), id if id
     end
 
     def subscribe(name, callable = Proc.new)
       backend.subscribe namespace.to_regexp(name), adapter.call(callable)
     end
+
     def all(callable = Proc.new)
       subscribe nil, callable
     end
@@ -53,6 +54,5 @@ module ZencoderEvent
 
   self.adapter = NotificationAdapter
   self.backend = ActiveSupport::Notifications
-  self.event_retriever = lambda { |state| Zencoder::Event.state}
   self.namespace = Namespace.new("zencoder_event", ".")
 end
