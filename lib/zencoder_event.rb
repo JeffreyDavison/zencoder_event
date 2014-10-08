@@ -13,7 +13,6 @@ module ZencoderEvent
     alias :setup :configure
 
     def instrument(params)
-      byebug
       state = params[:input][:state]
       id = params[:job][:pass_through]
       backend.instrument namespace.call(state), id if id
