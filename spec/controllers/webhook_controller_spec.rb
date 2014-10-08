@@ -1,7 +1,7 @@
 require 'rails_helper'
 require 'spec_helper'
 
-describe StripeEvent::WebhookController do
+describe ZencoderEvent::WebhookController do
   def stub_event(identifier, status = 200)
     stub_request(:get, "https://api.stripe.com/v1/events/#{identifier}").
       to_return(status: status, body: File.read("spec/support/fixtures/#{identifier}.json"))
@@ -13,7 +13,7 @@ describe StripeEvent::WebhookController do
 
   it "succeeds with valid event data" do
     count = 0
-    StripeEvent.subscribe('charge.succeeded') { |evt| count += 1 }
+    ZencoderEvent.subscribe('charge.succeeded') { |evt| count += 1 }
     stub_event('evt_charge_succeeded')
 
     webhook id: 'evt_charge_succeeded'
@@ -24,8 +24,8 @@ describe StripeEvent::WebhookController do
 
   it "succeeds when the event_retriever returns nil (simulating an ignored webhook event)" do
     count = 0
-    StripeEvent.event_retriever = lambda { |params| return nil }
-    StripeEvent.subscribe('charge.succeeded') { |evt| count += 1 }
+    ZencoderEvent.event_retriever = lambda { |params| return nil }
+    ZencoderEvent.subscribe('charge.succeeded') { |evt| count += 1 }
     stub_event('evt_charge_succeeded')
 
     webhook id: 'evt_charge_succeeded'
@@ -36,7 +36,7 @@ describe StripeEvent::WebhookController do
 
   it "denies access with invalid event data" do
     count = 0
-    StripeEvent.subscribe('charge.succeeded') { |evt| count += 1 }
+    ZencoderEvent.subscribe('charge.succeeded') { |evt| count += 1 }
     stub_event('evt_invalid_id', 404)
 
     webhook id: 'evt_invalid_id'
@@ -46,9 +46,9 @@ describe StripeEvent::WebhookController do
   end
 
   it "ensures user-generated Stripe exceptions pass through" do
-    StripeEvent.subscribe('charge.succeeded') { |evt| raise Stripe::StripeError, "testing" }
+    ZencoderEvent.subscribe('charge.succeeded') { |evt| raise Zencoder::StripeError, "testing" }
     stub_event('evt_charge_succeeded')
 
-    expect { webhook id: 'evt_charge_succeeded' }.to raise_error(Stripe::StripeError, /testing/)
+    expect { webhook id: 'evt_charge_succeeded' }.to raise_error(Zencoder::StripeError, /testing/)
   end
 end

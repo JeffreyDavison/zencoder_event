@@ -1,6 +1,6 @@
 require "active_support/notifications"
-require "ZencoderEvent"
 require "zencoder_event/engine" if defined?(Rails)
+require 'json'
 
 module ZencoderEvent
   class << self
@@ -13,25 +13,15 @@ module ZencoderEvent
     alias :setup :configure
 
     def instrument(params)
-      begin
-        event = event_retriever.call(params)
-      rescue Zencoder::AuthenticationError => e
-        if params[:type] == "account.application.deauthorized"
-          event = Zencoder::Event.construct_from(params.deep_symbolize_keys)
-        else
-          raise UnauthorizedError.new(e)
-        end
-      rescue Zencoder::ZencoderError => e
-        raise UnauthorizedError.new(e)
-      end
-
-      backend.instrument namespace.call(event[:type]), event if event
+      state = params[:input][:state]
+      id = params[:job][:pass_through]
+      #notification = JSON.parse(params[:input].to_s, object_class: OpenStruct)
+      backend.instrument namespace.call(state), id if id
     end
 
     def subscribe(name, callable = Proc.new)
       backend.subscribe namespace.to_regexp(name), adapter.call(callable)
     end
-
     def all(callable = Proc.new)
       subscribe nil, callable
     end
@@ -63,6 +53,6 @@ module ZencoderEvent
 
   self.adapter = NotificationAdapter
   self.backend = ActiveSupport::Notifications
-  self.event_retriever = lambda { |params| Zencoder::Event.retrieve(params[:id]) }
+  self.event_retriever = lambda { |state| Zencoder::Event.state}
   self.namespace = Namespace.new("zencoder_event", ".")
 end
